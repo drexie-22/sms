@@ -297,84 +297,110 @@ export default function MOU() {
       </DialogDescription>
 
       <div className="space-y-4">
-        <Input
-          value={editingInstitution.name}
-          onChange={(e) =>
-            setEditingInstitution((prev) =>
-              prev ? { ...prev, name: e.target.value } : prev
-            )
-          }
-          placeholder="Institution Name"
-        />
-        <Input
-          value={editingInstitution.institutionalCode}
-          onChange={(e) =>
-            setEditingInstitution((prev) =>
-              prev ? { ...prev, institutionalCode: e.target.value } : prev
-            )
-          }
-          placeholder="Institution Code"
-        />
-        <Input
-          value={editingInstitution.province}
-          onChange={(e) =>
-            setEditingInstitution((prev) =>
-              prev ? { ...prev, province: e.target.value } : prev
-            )
-          }
-          placeholder="Province"
-        />
-        <Input
-          value={editingInstitution.municipality}
-          onChange={(e) =>
-            setEditingInstitution((prev) =>
-              prev ? { ...prev, municipality: e.target.value } : prev
-            )
-          }
-          placeholder="Municipality"
-        />
-        <Input
-          value={editingInstitution.recipientName}
-          onChange={(e) =>
-            setEditingInstitution((prev) =>
-              prev ? { ...prev, recipientName: e.target.value } : prev
-            )
-          }
-          placeholder="Recipient Name"
-        />
-        <Select
-          value={editingInstitution.status}
-          onValueChange={(value) =>
-            setEditingInstitution((prev) =>
-              prev ? { ...prev, status: value as "active" | "inactive" } : prev
-            )
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Unit Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
-          </SelectContent>
-        </Select>
+        <div>
+          <label className="text-sm font-medium">Institution Name</label>
+          <Input
+            value={editingInstitution.name}
+            onChange={(e) =>
+              setEditingInstitution((prev) =>
+                prev ? { ...prev, name: e.target.value } : prev
+              )
+            }
+            placeholder="Institution Name"
+          />
+        </div>
 
-        <Select
-          value={editingInstitution.mouStatus}
-          onValueChange={(value) =>
-            setEditingInstitution((prev) =>
-              prev ? { ...prev, mouStatus: value as "Available" | "Missing" } : prev
-            )
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="MOU Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Available">Available</SelectItem>
-            <SelectItem value="Missing">Missing</SelectItem>
-          </SelectContent>
-        </Select>
+        <div>
+          <label className="text-sm font-medium">Institution Code</label>
+          <Input
+            value={editingInstitution.institutionalCode}
+            onChange={(e) =>
+              setEditingInstitution((prev) =>
+                prev ? { ...prev, institutionalCode: e.target.value } : prev
+              )
+            }
+            placeholder="Institution Code"
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-medium">Province</label>
+          <Input
+            value={editingInstitution.province}
+            onChange={(e) =>
+              setEditingInstitution((prev) =>
+                prev ? { ...prev, province: e.target.value } : prev
+              )
+            }
+            placeholder="Province"
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-medium">Municipality</label>
+          <Input
+            value={editingInstitution.municipality}
+            onChange={(e) =>
+              setEditingInstitution((prev) =>
+                prev ? { ...prev, municipality: e.target.value } : prev
+              )
+            }
+            placeholder="Municipality"
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-medium">Recipient Name</label>
+          <Input
+            value={editingInstitution.recipientName}
+            onChange={(e) =>
+              setEditingInstitution((prev) =>
+                prev ? { ...prev, recipientName: e.target.value } : prev
+              )
+            }
+            placeholder="Recipient Name"
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-medium">Unit Status</label>
+          <Select
+            value={editingInstitution.status}
+            onValueChange={(value) =>
+              setEditingInstitution((prev) =>
+                prev ? { ...prev, status: value as "active" | "inactive" } : prev
+              )
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Unit Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium">MOU Status</label>
+          <Select
+            value={editingInstitution.mouStatus}
+            onValueChange={(value) =>
+              setEditingInstitution((prev) =>
+                prev ? { ...prev, mouStatus: value as "Available" | "Missing" } : prev
+              )
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="MOU Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Available">Available</SelectItem>
+              <SelectItem value="Missing">Missing</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="flex justify-end gap-2 mt-4">
@@ -398,6 +424,7 @@ export default function MOU() {
     </DialogContent>
   </Dialog>
 )}
+
 
     </div>
   );
