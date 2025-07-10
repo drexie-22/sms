@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum InstitutionStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Institution {
+  id                Int               @id @default(autoincrement())
+  name              String
+  province          String
+  municipality      String
+  deploymentDate    DateTime
+  recipientName     String
+  completeAddress   String
+  institutionType   String
+  institutionalCode String            @unique
+  email             String
+  phone             String
+  yearDistributed   Int
+  isArchived        Boolean  @default(false)
+  status            InstitutionStatus @default(ACTIVE)
+}
+
+model Training {
+  id           Int      @id @default(autoincrement())
+  institution  String
+  date         DateTime
+  province     String
+  municipality String
+  trainer      String
+  type         String
+  mode         String
+  male         Int
+  female       Int
+  others       Int
+  total        Int
+  remarks      String?
+}
