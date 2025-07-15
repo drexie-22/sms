@@ -21,7 +21,7 @@ import { addInstitution } from "@/api/institutions";
 const institutionFormSchema = z.object({
   institutionName: z.string().min(1, "Institution name is required"),
   dateOfDeployment: z.string().min(1, "Date of deployment is required"),
-  completeAddress: z.string().min(1, "Complete address is required"),
+  barangay: z.string().min(1, "Barangay is required"),
   email: z.string().email("Invalid email address"),
   phone: z.string().min(1, "Phone number is required"),
   recipientName: z.string().min(1, "Recipient name is required"),
@@ -72,7 +72,7 @@ export default function AddInstitution() {
     defaultValues: {
       institutionName: "",
       dateOfDeployment: "",
-      completeAddress: "",
+      barangay: "",
       email: "",
       phone: "",
       recipientName: "",
@@ -85,43 +85,41 @@ export default function AddInstitution() {
   });
 
   const onSubmit = async (formData: InstitutionFormData) => {
-  try {
-    setIsSubmitting(true);
+    try {
+      setIsSubmitting(true);
 
-    // Use otherInstitutionType value if institutionType is "Others"
-    const finalInstitutionType =
-      formData.institutionType === "Others"
-        ? formData.otherInstitutionType?.trim() || "Others"
-        : formData.institutionType;
+      const finalInstitutionType =
+        formData.institutionType === "Others"
+          ? formData.otherInstitutionType?.trim() || "Others"
+          : formData.institutionType;
 
-    const result = await addInstitution({
-      name: formData.institutionName,
-      province: formData.province,
-      municipality: formData.municipality,
-      deploymentDate: formData.dateOfDeployment,
-      recipientName: formData.recipientName,
-      completeAddress: formData.completeAddress,
-      institutionType: finalInstitutionType,
-      institutionalCode: formData.institutionalCode,
-      email: formData.email,
-      phone: formData.phone,
-      yearDistributed: formData.yearDistributed,
-      status: formData.status,
-    });
+      const result = await addInstitution({
+        name: formData.institutionName,
+        province: formData.province,
+        municipality: formData.municipality,
+        deploymentDate: formData.dateOfDeployment,
+        recipientName: formData.recipientName,
+        barangay: formData.barangay,
+        institutionType: finalInstitutionType,
+        institutionalCode: formData.institutionalCode,
+        email: formData.email,
+        phone: formData.phone,
+        yearDistributed: formData.yearDistributed,
+        status: formData.status,
+      });
 
-    console.log("✅ Institution added:", result);
-    alert("✅ Institution added successfully!");
+      console.log("✅ Institution added:", result);
+      alert("✅ Institution added successfully!");
 
-    form.reset();
-    setSelectedFile(null);
-  } catch (error: any) {
-    console.error("❌ Submission error:", error);
-    alert(`❌ Failed to add institution: ${error.message || "Unknown error"}`);
-  } finally {
-    setIsSubmitting(false);
-  }
-};
-
+      form.reset();
+      setSelectedFile(null);
+    } catch (error: any) {
+      console.error("❌ Submission error:", error);
+      alert(`❌ Failed to add institution: ${error.message || "Unknown error"}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -145,7 +143,6 @@ export default function AddInstitution() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Institution & Recipient */}
               <div className="grid gap-4 md:grid-cols-2">
                 <FormField
                   control={form.control}
@@ -175,19 +172,18 @@ export default function AddInstitution() {
                 />
               </div>
 
-              {/* Address */}
               <FormField
                 control={form.control}
-                name="completeAddress"
+                name="barangay"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Complete Address</FormLabel>
+                    <FormLabel>Barangay</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Enter full address including barangay, municipality, city"
+                        placeholder="Enter barangay name"
                         {...field}
                         className="bg-background"
-                        rows={3}
+                        rows={2}
                       />
                     </FormControl>
                     <FormMessage />
@@ -195,7 +191,6 @@ export default function AddInstitution() {
                 )}
               />
 
-              {/* Location, Type, Code */}
               <div className="grid gap-4 md:grid-cols-4">
                 <FormField
                   control={form.control}
@@ -237,39 +232,36 @@ export default function AddInstitution() {
                 />
 
                 <FormField
-  control={form.control}
-  name="institutionType"
-  render={({ field }) => (
-    <FormItem>
-      <FormLabel>Institution Type</FormLabel>
-      <Select
-        onValueChange={(value) => field.onChange(value)}
-        defaultValue={field.value}
-      >
-        <FormControl>
-          <SelectTrigger className="bg-background">
-            <SelectValue placeholder="Select type" />
-          </SelectTrigger>
-        </FormControl>
-        <SelectContent className="max-h-48 overflow-y-auto">
-          <SelectItem value="Elementary School">Elementary School</SelectItem>
-          <SelectItem value="Junior High School">Junior High School</SelectItem>
-          <SelectItem value="Senior High School">Senior High School</SelectItem>
-          <SelectItem value="Integrated School">Integrated School</SelectItem>
-          <SelectItem value="College">College</SelectItem>
-          <SelectItem value="University">University</SelectItem>
-          <SelectItem value="Library">Library</SelectItem>
-          <SelectItem value="LGU">LGU</SelectItem>
-          <SelectItem value="NGO">NGO</SelectItem>
-          <SelectItem value="NGAs">NGAs</SelectItem>
-          <SelectItem value="CSOs">CSOs</SelectItem>
-          <SelectItem value="Others">Others</SelectItem>
-        </SelectContent>
-      </Select>
-      <FormMessage />
-    </FormItem>
-  )}
-/>
+                  control={form.control}
+                  name="institutionType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Institution Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="bg-background">
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-48 overflow-y-auto">
+                          <SelectItem value="Elementary School">Elementary School</SelectItem>
+                          <SelectItem value="Junior High School">Junior High School</SelectItem>
+                          <SelectItem value="Senior High School">Senior High School</SelectItem>
+                          <SelectItem value="Integrated School">Integrated School</SelectItem>
+                          <SelectItem value="College">College</SelectItem>
+                          <SelectItem value="University">University</SelectItem>
+                          <SelectItem value="Library">Library</SelectItem>
+                          <SelectItem value="LGU">LGU</SelectItem>
+                          <SelectItem value="NGO">NGO</SelectItem>
+                          <SelectItem value="NGAs">NGAs</SelectItem>
+                          <SelectItem value="CSOs">CSOs</SelectItem>
+                          <SelectItem value="Others">Others</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={form.control}
@@ -286,24 +278,22 @@ export default function AddInstitution() {
                 />
               </div>
 
-            {form.watch("institutionType") === "Others" && (
-              <FormField
-                control={form.control}
-                name="otherInstitutionType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Specify Other Institution Type</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter custom institution type" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
+              {form.watch("institutionType") === "Others" && (
+                <FormField
+                  control={form.control}
+                  name="otherInstitutionType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Specify Other Institution Type</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter custom institution type" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
-
-              {/* Contact */}
               <div className="grid gap-4 md:grid-cols-2">
                 <FormField
                   control={form.control}
@@ -333,7 +323,6 @@ export default function AddInstitution() {
                 />
               </div>
 
-              {/* Deployment & Status */}
               <div className="grid gap-4 md:grid-cols-3">
                 <FormField
                   control={form.control}
@@ -391,8 +380,6 @@ export default function AddInstitution() {
                 />
               </div>
 
-
-              {/* File Upload */}
               <div className="space-y-4">
                 <Label>MOU Document (Optional)</Label>
                 <div className="border-2 border-dashed border-border rounded-lg p-6 bg-background">
@@ -425,9 +412,6 @@ export default function AddInstitution() {
                 </div>
               </div>
 
-              
-
-              {/* Buttons */}
               <div className="flex justify-end space-x-4">
                 <Button
                   type="button"

@@ -119,7 +119,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </header>
 
             {/* Page content */}
-            <main className="flex-1 overflow-auto bg-background p-6">
+            <main className="flex-1 overflow-auto bg-background px-4 py-4 text-sm">
+              <div className="max-w-screen-lg mx-auto space-y-4"></div>
               {children}
             </main>
           </div>

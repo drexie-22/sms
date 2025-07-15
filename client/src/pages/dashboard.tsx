@@ -4,9 +4,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  School, TrendingUp, Users, Building, MapPin, CircleCheck, XCircle
+  School, TrendingUp, Users, Building, MapPin, CircleCheck, XCircle,
 } from "lucide-react";
-import ActiveUnitsModal from "@/components/ActiveUnitsModal";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   Legend, LabelList, PieChart, Pie, Cell,
@@ -43,11 +42,15 @@ export default function Dashboard() {
       .catch((error) => console.error("❌ Error fetching GAD count:", error));
   }, []);
 
+  const validInstitutions = useMemo(() => {
+    return institutions.filter((i: any) => i?.name && i?.province && i?.institutionType);
+  }, [institutions]);
+
   const filteredInstitutions = useMemo(() => {
     return selectedProvince
-      ? institutions.filter((i: any) => i.province?.trim() === selectedProvince)
-      : institutions;
-  }, [institutions, selectedProvince]);
+      ? validInstitutions.filter((i: any) => i.province?.trim() === selectedProvince)
+      : validInstitutions;
+  }, [validInstitutions, selectedProvince]);
 
   const paginated = filteredInstitutions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
   const totalPages = Math.ceil(filteredInstitutions.length / itemsPerPage);
@@ -55,48 +58,52 @@ export default function Dashboard() {
   const statusStats = useMemo(() => {
     let active = 0;
     let inactive = 0;
-    institutions.forEach((i: any) => {
-      const status = String(i.status || "").toUpperCase();
-      if (status === "ACTIVE") active++;
-      else if (status === "INACTIVE") inactive++;
+    let unknown = 0;
+    validInstitutions.forEach((i: any) => {
+      const status = String(i.unitStatus || "").toLowerCase().trim();
+      if (status === "active") active++;
+      else if (status === "inactive") inactive++;
+      else unknown++;
     });
-    return { active, inactive };
-  }, [institutions]);
+    return { active, inactive, unknown };
+  }, [validInstitutions]);
 
   const stats = [
     {
       title: "Total Sites in Region 1",
-      value: institutions.length.toString(),
+      value: validInstitutions.length.toString(),
       icon: School,
-      description: "as of 2025",
+      description: `as of ${new Date().getFullYear()}`,
     },
     {
       title: "Institutions Deployed",
-      value: institutions.length.toString(),
+      value: validInstitutions.length.toString(),
       icon: Users,
       description: "including SUCs, LGUs, and schools",
     },
     {
       title: "Active Units",
-      value: `${statusStats.active}`,
+      value: statusStats.active.toString(),
       icon: GreenCircleIcon,
+      description: "Units currently active",
     },
     {
       title: "Inactive Units",
       value: statusStats.inactive.toString(),
       icon: X,
+      description: "Units not currently active",
     },
     {
-      title: "GAD-Related Programs",
+      title: "Total Number of Trainings",
       value: gadFocusedCount !== null ? gadFocusedCount.toString() : "–",
       icon: Building,
-      description: "Total GAD-related programs",
+      description: "Total Trainings",
     },
   ];
 
   const deploymentTrends = useMemo(() => {
     const yearMap: Record<string, number> = {};
-    institutions.forEach((i: any) => {
+    validInstitutions.forEach((i: any) => {
       const date = new Date(i.deploymentDate);
       const year = !isNaN(date.getTime()) ? date.getFullYear().toString() : "Unknown";
       yearMap[year] = (yearMap[year] || 0) + 1;
@@ -104,16 +111,16 @@ export default function Dashboard() {
     return Object.entries(yearMap)
       .map(([year, count]) => ({ year, count }))
       .sort((a, b) => parseInt(a.year) - parseInt(b.year));
-  }, [institutions]);
+  }, [validInstitutions]);
 
   const institutionTypeDistribution = useMemo(() => {
     const typeMap: Record<string, number> = {};
-    institutions.forEach((i: any) => {
+    validInstitutions.forEach((i: any) => {
       const type = i.institutionType || "Unknown";
       typeMap[type] = (typeMap[type] || 0) + 1;
     });
     return Object.entries(typeMap).map(([name, value]) => ({ name, value }));
-  }, [institutions]);
+  }, [validInstitutions]);
 
   return (
     <div className="space-y-6">
@@ -126,26 +133,18 @@ export default function Dashboard() {
 
       {/* Summary Cards */}
       <div className="grid gap-6 md:grid-cols-4 lg:grid-cols-5">
-        {stats.map((stat) => {
-          const isActiveCard = stat.title === "Active Units";
-          const cardContent = (
-            <Card key={stat.title} className="shadow-md cursor-pointer hover:shadow-lg transition h-full">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
-                <stat.icon className="h-5 w-5 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-                <p className="text-xs text-muted-foreground">{stat.description}</p>
-              </CardContent>
-            </Card>
-          );
-          return isActiveCard ? (
-            <ActiveUnitsModal key={stat.title}>{cardContent}</ActiveUnitsModal>
-          ) : (
-            cardContent
-          );
-        })}
+        {stats.map((stat) => (
+          <Card key={stat.title} className="shadow-md cursor-pointer hover:shadow-lg transition h-full">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
+              <stat.icon className="h-5 w-5 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-foreground">{stat.value}</div>
+              <p className="text-xs text-muted-foreground">{stat.description}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Charts */}
@@ -158,14 +157,17 @@ export default function Dashboard() {
             </CardTitle>
             <CardDescription>Deployments across Region 1 by year</CardDescription>
           </CardHeader>
-          <CardContent className="h-[250px]">
+          <CardContent className="h-[300px] pt-8">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={deploymentTrends}>
+              <BarChart
+                data={deploymentTrends}
+                margin={{ top: 50, right: 30, left: 20, bottom: 20 }}
+              >
                 <XAxis dataKey="year" />
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="count" fill="#1E3A8A">
+                <Bar dataKey="count" name="Institutions" fill="#1E3A8A" barSize={24}>
                   <LabelList dataKey="count" position="top" />
                 </Bar>
               </BarChart>
@@ -181,7 +183,7 @@ export default function Dashboard() {
             </CardTitle>
             <CardDescription>Breakdown of all deployed institution types</CardDescription>
           </CardHeader>
-          <CardContent className="h-[300px]">
+          <CardContent className="h-[400px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -190,15 +192,16 @@ export default function Dashboard() {
                   nameKey="name"
                   cx="50%"
                   cy="50%"
-                  outerRadius={90}
-                  label
+                  outerRadius={100}
+                  labelLine={false}
+                  label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
                 >
                   {institutionTypeDistribution.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip />
-                <Legend />
+                <Legend layout="horizontal" verticalAlign="bottom" />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -217,7 +220,7 @@ export default function Dashboard() {
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {["Ilocos Norte", "Ilocos Sur", "La Union", "Pangasinan"].map((province) => {
-              const count = institutions.filter((i: any) => i.province?.trim() === province).length;
+              const count = validInstitutions.filter((i: any) => i.province?.trim() === province).length;
               return (
                 <button
                   key={province}
@@ -243,7 +246,7 @@ export default function Dashboard() {
       <Card ref={recentDeploymentsRef}>
         <CardHeader>
           <CardTitle className="flex justify-between items-center">
-            <span>{selectedProvince ? `Deployments in ${selectedProvince}` : "Recent Deployments"}</span>
+            <span>{selectedProvince ? `${selectedProvince}` : "Recent Deployments"}</span>
             <div className="space-x-2">
               <Button
                 variant="outline"
@@ -288,7 +291,21 @@ export default function Dashboard() {
 
           <div className="space-y-4 max-h-[450px] overflow-y-auto pr-1">
             {paginated.map((deployment: any) => {
-              const status = deployment.status?.trim().toLowerCase();
+              const rawStatus = (deployment.unitStatus || "").trim().toLowerCase();
+              const displayStatus =
+                rawStatus === "active"
+                  ? "Active"
+                  : rawStatus === "inactive"
+                  ? "Inactive"
+                  : "Unknown";
+
+              const badgeVariant =
+                displayStatus === "Active"
+                  ? "default"
+                  : displayStatus === "Inactive"
+                  ? "secondary"
+                  : "outline";
+
               return (
                 <div
                   key={deployment.id}
@@ -314,11 +331,8 @@ export default function Dashboard() {
                         ? new Date(deployment.deploymentDate).toLocaleDateString()
                         : "–"}
                     </p>
-                    <Badge
-                      variant={status === "active" ? "default" : "secondary"}
-                      className="mt-1"
-                    >
-                      {status === "active" ? "Active" : "Inactive"}
+                    <Badge variant={badgeVariant} className="mt-1">
+                      {displayStatus}
                     </Badge>
                   </div>
                 </div>

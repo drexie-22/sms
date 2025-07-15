@@ -26,18 +26,14 @@ import {
 } from "@/components/ui/table";
 import {
   Upload,
-  Download,
-  Eye,
-  Calendar,
   MapPin,
   PlusCircle,
   ArchiveRestore,
   Bell,
   Pencil,
-  Trash2,
+  Eye,
 } from "lucide-react";
 
-import AddTraining from "@/pages/add-trainings";
 import AddInstitution from "@/pages/add-school";
 import {
   Dialog,
@@ -52,6 +48,7 @@ interface Institution {
   id: number;
   name: string;
   institutionalCode: string;
+  type?: string;
   recipientName: string;
   province: string;
   municipality: string;
@@ -59,15 +56,21 @@ interface Institution {
   mouFileSize?: string;
   mouStatus: "Available" | "Missing";
   mouUploadDate?: string;
-  status?: "active" | "inactive"; // ✅ Added unit status
+  unitStatus?: "active" | "inactive";
+  archived?: boolean;
+  status?: string;
 }
 
 export default function MOU() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProvince, setSelectedProvince] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("");
+  const [selectedUnitStatus, setSelectedUnitStatus] = useState("");
   const [institutions, setInstitutions] = useState<Institution[]>([]);
+
   const [editingInstitution, setEditingInstitution] = useState<Institution | null>(null);
+  const [viewingInstitution, setViewingInstitution] = useState<Institution | null>(null);
+  const [notifyingInstitution, setNotifyingInstitution] = useState<Institution | null>(null);
+  const [notificationMessage, setNotificationMessage] = useState("");
 
   useEffect(() => {
     fetchInstitutions()
@@ -76,30 +79,33 @@ export default function MOU() {
   }, []);
 
   const filteredDocuments = institutions.filter((doc) => {
+    if (doc.archived) return false;
     const matchesSearch =
       searchQuery === "" ||
       doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       doc.province.toLowerCase().includes(searchQuery.toLowerCase());
-
     const matchesProvince =
       selectedProvince === "" || selectedProvince === "all" || doc.province === selectedProvince;
-
-    const matchesStatus =
-      selectedStatus === "" || selectedStatus === "all" || doc.mouStatus === selectedStatus;
-
-    return matchesSearch && matchesProvince && matchesStatus;
+    const matchesUnitStatus =
+      selectedUnitStatus === "" || selectedUnitStatus === "all" || doc.unitStatus === selectedUnitStatus;
+    return matchesSearch && matchesProvince && matchesUnitStatus;
   });
 
-  const handleViewDocument = (fileName: string) => alert("Viewing: " + fileName);
-  const handleDownloadDocument = (fileName: string) => alert("Downloading: " + fileName);
-  const handleArchive = (code: string) => alert(`Archiving ${code}`);
-  const handleNotify = (recipient: string) => alert(`Notification sent to ${recipient}`);
-  const handleDelete = (code: string) => {
-    const confirmDelete = confirm("Are you sure you want to delete this institution?");
-    if (confirmDelete) {
-      alert(`Deleted ${code}`);
-      setInstitutions((prev) => prev.filter((i) => i.institutionalCode !== code));
-    }
+  const handleArchive = (institutionCode: string) => {
+    if (!confirm("Are you sure you want to archive this institution?")) return;
+    setInstitutions((prev) =>
+      prev.map((inst) =>
+        inst.institutionalCode === institutionCode ? { ...inst, archived: true } : inst
+      )
+    );
+    alert("Institution archived.");
+  };
+
+  const handleSendNotification = () => {
+    if (!notificationMessage.trim() || !notifyingInstitution) return;
+    alert(`Message sent to ${notifyingInstitution.recipientName}:\n${notificationMessage}`);
+    setNotificationMessage("");
+    setNotifyingInstitution(null);
   };
 
   return (
@@ -121,17 +127,6 @@ export default function MOU() {
             <div className="flex items-center space-x-2">
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button variant="secondary">
-                    <PlusCircle className="h-4 w-4 mr-2" />
-                    Add Trainings
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="w-full max-w-4xl h-[800px] rounded-lg shadow-xl bg-white dark:bg-gray-900 overflow-auto">
-                  <AddTraining />
-                </DialogContent>
-              </Dialog>
-              <Dialog>
-                <DialogTrigger asChild>
                   <Button variant="outline">
                     <PlusCircle className="h-4 w-4 mr-2" />
                     Add Institution
@@ -146,6 +141,7 @@ export default function MOU() {
         </CardHeader>
 
         <CardContent className="space-y-6 mt-4">
+          {/* Search and Filter */}
           <div className="grid gap-4 md:grid-cols-4">
             <Input
               placeholder="Search by institution name or province..."
@@ -153,6 +149,7 @@ export default function MOU() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="col-span-2"
             />
+
             <Select value={selectedProvince} onValueChange={setSelectedProvince}>
               <SelectTrigger>
                 <SelectValue placeholder="All Provinces" />
@@ -166,18 +163,19 @@ export default function MOU() {
               </SelectContent>
             </Select>
 
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+            <Select value={selectedUnitStatus} onValueChange={setSelectedUnitStatus}>
               <SelectTrigger>
-                <SelectValue placeholder="All Status" />
+                <SelectValue placeholder="All Unit Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Available">Available</SelectItem>
-                <SelectItem value="Missing">Missing</SelectItem>
+                <SelectItem value="all">All Unit Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
+          {/* Counts */}
           <div className="flex justify-between text-sm text-muted-foreground">
             <span>Found {filteredDocuments.length} document(s)</span>
             <span>
@@ -186,24 +184,22 @@ export default function MOU() {
             </span>
           </div>
 
+          {/* Table */}
           <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Institution</TableHead>
                   <TableHead>Code</TableHead>
-                  <TableHead>Recipient</TableHead>
-                  <TableHead>Document</TableHead>
-                  <TableHead>Upload Date</TableHead>
-                  <TableHead>MOU Status</TableHead>
-                  <TableHead>Unit Status</TableHead> {/* ✅ New Column */}
+                  <TableHead>MOU</TableHead>
+                  <TableHead>Unit Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredDocuments.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       No MOU documents found.
                     </TableCell>
                   </TableRow>
@@ -220,65 +216,42 @@ export default function MOU() {
                         </div>
                       </TableCell>
                       <TableCell className="text-xs font-mono">{doc.institutionalCode}</TableCell>
-                      <TableCell>{doc.recipientName}</TableCell>
                       <TableCell>
-                        {doc.mouFile ? (
-                          <div>
-                            <p className="text-sm">{doc.mouFile}</p>
-                            <p className="text-xs text-muted-foreground">{doc.mouFileSize}</p>
-                          </div>
+                        {doc.mouStatus === "Available" && doc.mouFile ? (
+                          <span className="text-green-600 font-medium">Uploaded</span>
                         ) : (
-                          <span className="text-xs text-muted-foreground">No file</span>
+                          <span className="text-red-500 font-medium">Not yet uploaded</span>
                         )}
                       </TableCell>
                       <TableCell>
-                        {doc.mouUploadDate ? (
-                          <div className="flex items-center text-sm">
-                            <Calendar className="h-3 w-3 mr-1" />
-                            {new Date(doc.mouUploadDate).toLocaleDateString()}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">Not uploaded</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={doc.mouStatus === "Available" ? "default" : "destructive"}>
-                          {doc.mouStatus}
+                        <Badge variant={doc.unitStatus === "active" ? "default" : "secondary"}>
+                          {doc.unitStatus
+                            ? doc.unitStatus.charAt(0).toUpperCase() + doc.unitStatus.slice(1)
+                            : "Unknown"}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={doc.status === "active" ? "default" : "secondary"}>
-                          {doc.status ? doc.status.charAt(0).toUpperCase() + doc.status.slice(1) : "Unknown"}
-                        </Badge>
+                        <div className="flex gap-1 flex-wrap">
+                          <Button variant="ghost" size="sm" onClick={() => setViewingInstitution(doc)} title="View Details">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setNotifyingInstitution(doc)} title="Notify">
+                            <Bell className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setEditingInstitution(doc)} title="Edit">
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleArchive(doc.institutionalCode)} title="Archive">
+                            <ArchiveRestore className="h-4 w-4" />
+                          </Button>
+                          {doc.mouStatus === "Missing" && (
+                            <Button variant="outline" size="sm" title="Upload MOU">
+                              <Upload className="h-4 w-4 mr-1" />
+                              Upload
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
-                      <TableCell>
-  <div className="flex gap-1 flex-wrap">
-    {doc.mouStatus === "Available" && (
-      <Button variant="ghost" size="sm" onClick={() => handleViewDocument(doc.mouFile!)}>
-        <Eye className="h-4 w-4" />
-      </Button>
-    )}
-    <Button variant="ghost" size="sm" onClick={() => handleNotify(doc.recipientName)}>
-      <Bell className="h-4 w-4" />
-    </Button>
-    <Button variant="ghost" size="sm" onClick={() => setEditingInstitution(doc)}>
-      <Pencil className="h-4 w-4" />
-    </Button>
-    <Button variant="ghost" size="sm" onClick={() => handleArchive(doc.institutionalCode)}>
-      <ArchiveRestore className="h-4 w-4" />
-    </Button>
-    <Button variant="ghost" size="sm" onClick={() => handleDelete(doc.institutionalCode)}>
-      <Trash2 className="h-4 w-4" />
-    </Button>
-    {doc.mouStatus === "Missing" && (
-      <Button variant="outline" size="sm">
-        <Upload className="h-4 w-4 mr-1" />
-        Upload
-      </Button>
-    )}
-  </div>
-</TableCell>
-
                     </TableRow>
                   ))
                 )}
@@ -288,144 +261,180 @@ export default function MOU() {
         </CardContent>
       </Card>
 
+      {/* View Institution */}
+      {viewingInstitution && (
+        <Dialog open={true} onOpenChange={() => setViewingInstitution(null)}>
+          <DialogContent className="w-full max-w-2xl">
+            <DialogTitle>Institution Details</DialogTitle>
+            <DialogDescription>
+              Details for <strong>{viewingInstitution.name}</strong>
+            </DialogDescription>
+            <div className="space-y-4 mt-4">
+              <DetailRow label="Institution Name" value={viewingInstitution.name} />
+              <DetailRow label="Institutional Code" value={viewingInstitution.institutionalCode} />
+              <DetailRow label="Type" value={viewingInstitution.type || "N/A"} />
+              <DetailRow label="Location" value={`${viewingInstitution.municipality}, ${viewingInstitution.province}`} />
+              <DetailRow label="Unit Status" value={viewingInstitution.unitStatus ? viewingInstitution.unitStatus.charAt(0).toUpperCase() + viewingInstitution.unitStatus.slice(1) : "Unknown"} />
+              <DetailRow label="MOU Status" value={viewingInstitution.mouStatus} />
+              {viewingInstitution.mouStatus === "Available" && viewingInstitution.mouFile && (
+                <a
+                  href={`/uploads/mou/${viewingInstitution.mouFile}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 underline"
+                >
+                  View MOU Document
+                </a>
+              )}
+            </div>
+            <div className="flex justify-end mt-6">
+              <Button variant="outline" onClick={() => setViewingInstitution(null)}>
+                Close
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Edit Institution */}
       {editingInstitution && (
-  <Dialog open={true} onOpenChange={() => setEditingInstitution(null)}>
-    <DialogContent className="w-full max-w-2xl">
-      <DialogTitle>Edit Institution</DialogTitle>
-      <DialogDescription>
-        Update details for <strong>{editingInstitution.name}</strong>
-      </DialogDescription>
+        <Dialog open={true} onOpenChange={() => setEditingInstitution(null)}>
+          <DialogContent className="w-full max-w-2xl">
+            <DialogTitle>Edit Institution</DialogTitle>
+            <DialogDescription>
+              Update details for <strong>{editingInstitution.name}</strong>
+            </DialogDescription>
 
-      <div className="space-y-4">
-        <div>
-          <label className="text-sm font-medium">Institution Name</label>
-          <Input
-            value={editingInstitution.name}
-            onChange={(e) =>
-              setEditingInstitution((prev) =>
-                prev ? { ...prev, name: e.target.value } : prev
-              )
-            }
-            placeholder="Institution Name"
-          />
-        </div>
+            <div className="space-y-4">
+              <InputField label="Institution Name" value={editingInstitution.name} onChange={(value) => setEditingInstitution((prev) => (prev ? { ...prev, name: value } : prev))} />
+              <InputField label="Institution Code" value={editingInstitution.institutionalCode} onChange={(value) => setEditingInstitution((prev) => (prev ? { ...prev, institutionalCode: value } : prev))} />
+              <InputField label="Province" value={editingInstitution.province} onChange={(value) => setEditingInstitution((prev) => (prev ? { ...prev, province: value } : prev))} />
+              <InputField label="Municipality" value={editingInstitution.municipality} onChange={(value) => setEditingInstitution((prev) => (prev ? { ...prev, municipality: value } : prev))} />
 
-        <div>
-          <label className="text-sm font-medium">Institution Code</label>
-          <Input
-            value={editingInstitution.institutionalCode}
-            onChange={(e) =>
-              setEditingInstitution((prev) =>
-                prev ? { ...prev, institutionalCode: e.target.value } : prev
-              )
-            }
-            placeholder="Institution Code"
-          />
-        </div>
+              <div>
+                <label className="text-sm font-medium">Unit Status</label>
+                <Select value={editingInstitution.unitStatus} onValueChange={(value) => setEditingInstitution((prev) => (prev ? { ...prev, unitStatus: value as "active" | "inactive" } : prev))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Unit Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-        <div>
-          <label className="text-sm font-medium">Province</label>
-          <Input
-            value={editingInstitution.province}
-            onChange={(e) =>
-              setEditingInstitution((prev) =>
-                prev ? { ...prev, province: e.target.value } : prev
-              )
-            }
-            placeholder="Province"
-          />
-        </div>
+              <div>
+                <label className="text-sm font-medium">MOU Status</label>
+                <Select value={editingInstitution.mouStatus} onValueChange={(value) => setEditingInstitution((prev) => (prev ? { ...prev, mouStatus: value as "Available" | "Missing" } : prev))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="MOU Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Available">Available</SelectItem>
+                    <SelectItem value="Missing">Missing</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-        <div>
-          <label className="text-sm font-medium">Municipality</label>
-          <Input
-            value={editingInstitution.municipality}
-            onChange={(e) =>
-              setEditingInstitution((prev) =>
-                prev ? { ...prev, municipality: e.target.value } : prev
-              )
-            }
-            placeholder="Municipality"
-          />
-        </div>
+              {/* File Upload Field */}
+              <div>
+                <label className="text-sm font-medium">Upload MOU File</label>
+                <Input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file && editingInstitution) {
+                      const fileName = file.name;
+                      const fileSize = `${(file.size / 1024).toFixed(2)} KB`;
 
-        <div>
-          <label className="text-sm font-medium">Recipient Name</label>
-          <Input
-            value={editingInstitution.recipientName}
-            onChange={(e) =>
-              setEditingInstitution((prev) =>
-                prev ? { ...prev, recipientName: e.target.value } : prev
-              )
-            }
-            placeholder="Recipient Name"
-          />
-        </div>
+                      setEditingInstitution((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              mouFile: fileName,
+                              mouFileSize: fileSize,
+                              mouStatus: "Available",
+                            }
+                          : prev
+                      );
+                    }
+                  }}
+                />
+                {editingInstitution.mouFile && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Current file: <span className="underline">{editingInstitution.mouFile}</span>{" "}
+                    ({editingInstitution.mouFileSize})
+                  </p>
+                )}
+              </div>
+            </div>
 
-        <div>
-          <label className="text-sm font-medium">Unit Status</label>
-          <Select
-            value={editingInstitution.status}
-            onValueChange={(value) =>
-              setEditingInstitution((prev) =>
-                prev ? { ...prev, status: value as "active" | "inactive" } : prev
-              )
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Unit Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setEditingInstitution(null)}>
+                Cancel
+              </Button>
+              <Button onClick={() => {
+                if (!editingInstitution) return;
+                setInstitutions((prev) =>
+                  prev.map((inst) => (inst.id === editingInstitution.id ? editingInstitution : inst))
+                );
+                setEditingInstitution(null);
+              }}>
+                Save
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
-        <div>
-          <label className="text-sm font-medium">MOU Status</label>
-          <Select
-            value={editingInstitution.mouStatus}
-            onValueChange={(value) =>
-              setEditingInstitution((prev) =>
-                prev ? { ...prev, mouStatus: value as "Available" | "Missing" } : prev
-              )
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="MOU Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Available">Available</SelectItem>
-              <SelectItem value="Missing">Missing</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      {/* Notification Dialog */}
+      {notifyingInstitution && (
+        <Dialog open={true} onOpenChange={() => setNotifyingInstitution(null)}>
+          <DialogContent className="w-full max-w-lg">
+            <DialogTitle>Send Notification</DialogTitle>
+            <DialogDescription>
+              Send a message to <strong>{notifyingInstitution.recipientName}</strong>
+            </DialogDescription>
 
-      <div className="flex justify-end gap-2 mt-4">
-        <Button variant="outline" onClick={() => setEditingInstitution(null)}>
-          Cancel
-        </Button>
-        <Button
-          onClick={() => {
-            if (!editingInstitution) return;
-            setInstitutions((prev) =>
-              prev.map((inst) =>
-                inst.id === editingInstitution.id ? editingInstitution : inst
-              )
-            );
-            setEditingInstitution(null);
-          }}
-        >
-          Save
-        </Button>
-      </div>
-    </DialogContent>
-  </Dialog>
-)}
+            <textarea
+              className="w-full mt-4 p-2 border rounded resize-y"
+              rows={5}
+              placeholder="Type your message here..."
+              value={notificationMessage}
+              onChange={(e) => setNotificationMessage(e.target.value)}
+            />
 
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setNotifyingInstitution(null)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSendNotification} disabled={!notificationMessage.trim()}>
+                Send
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
+}
 
+function InputField({ label, value, onChange }: { label: string; value: string; onChange: (val: string) => void }) {
+  return (
+    <div>
+      <label className="text-sm font-medium">{label}</label>
+      <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder={label} />
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between border-b py-1">
+      <span className="font-semibold">{label}:</span>
+      <span>{value}</span>
     </div>
   );
 }

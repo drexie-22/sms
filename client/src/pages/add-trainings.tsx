@@ -12,7 +12,7 @@ import {
   SelectContent,
 } from "@/components/ui/select";
 
-import { addTraining } from "@/api/trainings"; // Make sure this exists and is properly implemented
+import { addTraining } from "@/api/trainings";
 
 export default function TrainingForm() {
   const [formData, setFormData] = useState({
@@ -26,11 +26,11 @@ export default function TrainingForm() {
     gadRemarks: "",
   });
 
-  const [participants, setParticipants] = useState({ male: 0, female: 0, others: 0 });
+  const [participants, setParticipants] = useState({ male: 0, female: 0 });
   const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    setTotal(Number(participants.male) + Number(participants.female) + Number(participants.others));
+    setTotal(Number(participants.male) + Number(participants.female));
   }, [participants]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -44,25 +44,24 @@ export default function TrainingForm() {
   };
 
   const handleSubmit = async () => {
-  try {
-    const trainingData = {
-      ...formData,
-      type: formData.trainingType,
-      mode: formData.trainingMode,
-      participants,
-      totalParticipants: total,
-      gadRemarks: formData.gadRemarks,
-    };
+    try {
+      const trainingData = {
+        ...formData,
+        type: formData.trainingType,
+        mode: formData.trainingMode,
+        participants,
+        totalParticipants: total,
+        gadRemarks: formData.gadRemarks,
+      };
 
-    const result = await addTraining(trainingData);
-    console.log("✅ Training saved:", result);
-    alert("Training saved successfully!");
-  } catch (err) {
-    console.error("❌ Failed to save training", err);
-    alert("Failed to save training");
-  }
-};
-
+      const result = await addTraining(trainingData);
+      console.log("✅ Training saved:", result);
+      alert("Training saved successfully!");
+    } catch (err) {
+      console.error("❌ Failed to save training", err);
+      alert("Failed to save training");
+    }
+  };
 
   return (
     <Card className="w-full max-w-3xl mx-auto">
@@ -122,7 +121,7 @@ export default function TrainingForm() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <Label>Male Participants</Label>
             <Input
@@ -138,15 +137,6 @@ export default function TrainingForm() {
               type="number"
               name="female"
               value={participants.female}
-              onChange={handleParticipantChange}
-            />
-          </div>
-          <div>
-            <Label>Others / Prefer not to say</Label>
-            <Input
-              type="number"
-              name="others"
-              value={participants.others}
               onChange={handleParticipantChange}
             />
           </div>

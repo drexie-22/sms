@@ -102,6 +102,23 @@ router.delete("/:id", async (req, res) => {
 }
 });
 
+// PUT /api/institutions/:id
+router.put("/institutions/:id", async (req, res) => {
+  const { id } = req.params;
+  const data = req.body;
+  try {
+    const updated = await prisma.institution.update({
+      where: { id: Number(id) },
+      data,
+    });
+    res.json(updated);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Update failed" });
+  }
+});
+
+
 
 
 

@@ -13,6 +13,7 @@ import Notifications from "@/pages/notifications";
 import Trainings from "@/pages/trainings";
 import NotFound from "@/pages/not-found";
 
+
 function Router() {
   return (
     <DashboardLayout>

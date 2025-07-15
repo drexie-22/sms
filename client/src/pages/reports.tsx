@@ -53,33 +53,30 @@ export default function Reports() {
     return Array.from(set).sort();
   }, [institutions]);
 
-  const groupedByProvince: GroupedData[] = useMemo(() => {
-    return provinces.map((province) => {
-      const data = institutions.filter((i) => i.province === province);
-      const countByType: Record<string, number> = {
-        "Elementary School": 0,
-        "High School": 0,
-        "College/University": 0,
-        "Government Office/Agency": 0,
-        "LGU": 0,
-        "DOST AGENCY": 0,
-      };
+  const institutionTypes = useMemo(() => {
+  const typeSet = new Set<string>();
+  institutions.forEach((i) => {
+    if (i.institutionType) typeSet.add(i.institutionType);
+  });
+  return Array.from(typeSet).sort();
+}, [institutions]);
 
-      data.forEach((item: Institution) => {
-        const t = item.institutionType;
-        const deployed = item.deployed || 1;
-        if (t === "Elementary") countByType["Elementary School"] += deployed;
-        else if (["Secondary", "High School"].includes(t)) countByType["High School"] += deployed;
-        else if (["SUCs", "Private HEIs", "College/University"].includes(t)) countByType["College/University"] += deployed;
-        else if (t === "LGU") countByType["LGU"] += deployed;
-        else if (t === "DOST AGENCY") countByType["DOST AGENCY"] += deployed;
-        else if (["NGAs", "Government Office/Agency"].includes(t)) countByType["Government Office/Agency"] += deployed;
-      });
+const groupedByProvince: GroupedData[] = useMemo(() => {
+  return provinces.map((province) => {
+    const data = institutions.filter((i) => i.province === province);
+    const countByType: Record<string, number> = {};
 
-      const total = Object.values(countByType).reduce((a, b) => a + b, 0);
-      return { province, data, countByType, total };
+    data.forEach((item: Institution) => {
+      const t = item.institutionType || "Unknown";
+      const deployed = item.deployed || 1;
+      countByType[t] = (countByType[t] || 0) + deployed;
     });
-  }, [institutions, provinces]);
+
+    const total = Object.values(countByType).reduce((a, b) => a + b, 0);
+    return { province, data, countByType, total };
+  });
+}, [institutions, provinces]);
+
 
   const activeProvince = groupedByProvince.find((p) => p.province === selectedProvince);
 
@@ -150,7 +147,7 @@ export default function Reports() {
       title: "Total Sites in Region 1",
       value: institutions.length.toString(),
       icon: School,
-      description: "as of 2025",
+      description: `as of ${new Date().getFullYear()}`,
     },
     {
       title: "Institutions Deployed",
@@ -237,7 +234,8 @@ export default function Reports() {
                       <td className="p-3 text-center">{prov.countByType["College/University"]}</td>
                       <td className="p-3 text-center">{prov.countByType["Government Office/Agency"]}</td>
                       <td className="p-3 text-center">{prov.countByType["LGU"]}</td>
-                      <td className="p-3 text-center">{prov.countByType["DOST AGENCY"]}</td>
+                      <td className="p-3 text-center">{prov.countByType["DOST"] || prov.countByType["DOST Agency"] || prov.countByType["DOST AGENCY"] || 0}</td>
+
                       <td className="p-3 text-center font-semibold">{prov.total}</td>
                     </tr>
                   ))}
